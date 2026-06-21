@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Alf en el aire">
+<title>Alf en el aire</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap');
+:root{--sky:#0ea5e9;--sky-dark:#0369a1;--night:#0f172a;--mid:#1e293b;--slate:#64748b;--green:#10b981;--amber:#f59e0b;--purple:#8b5cf6;--red:#ef4444;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--night);color:#fff;min-height:100vh;max-width:480px;margin:0 auto;font-size:16px;}
+/* HEADER */
+.header{background:linear-gradient(135deg,#0f172a,#0c1a2e);border-bottom:1px solid rgba(14,165,233,0.15);padding:16px 16px 12px;padding-top:calc(16px + env(safe-area-inset-top));position:sticky;top:0;z-index:100;}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.logo{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.logo-plane{font-size:36px;display:inline-block;animation:float 3s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-4px) rotate(5deg)}}
+.logo-text{display:flex;flex-direction:column;line-height:1.0;}
+.logo-name{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:0.02em;}
+.logo-rol{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;color:var(--sky);letter-spacing:0.2em;text-transform:uppercase;border-top:1px solid rgba(14,165,233,0.3);padding-top:2px;margin-top:2px;}
+.alf-btn{background:rgba(14,165,233,0.15);border:1px solid rgba(14,165,233,0.35);color:#7dd3fc;border-radius:12px;padding:8px 13px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;text-align:center;line-height:1.5;transition:background 0.2s;}
+.alf-btn:hover{background:rgba(14,165,233,0.28);}
+.alf-btn span{color:#fff;}
+.nav-row{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin-top:11px;}
+.month-btn{background:rgba(255,255,255,0.06);border:none;color:#94a3b8;border-radius:7px;width:30px;height:30px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;}
+.month-label{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:#cbd5e1;min-width:94px;text-align:center;}
+.view-toggle{display:flex;background:rgba(255,255,255,0.04);border-radius:9px;padding:3px;gap:3px;margin-top:8px;}
+.view-btn{flex:1;padding:6px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#475569;transition:all 0.2s;white-space:nowrap;}
+.view-btn.active{background:rgba(14,165,233,0.2);color:#7dd3fc;}
+/* STATUS */
+.status-card{margin:12px 16px 0;border-radius:14px;padding:15px 16px;position:relative;display:none;animation:slideIn 0.3s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.status-close{position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.07);border:none;color:#64748b;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:15px;}
+.status-emoji{font-size:32px;margin-bottom:7px;}
+.status-title{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;}
+.status-detail{font-size:14px;color:#94a3b8;line-height:1.65;}
+.status-local-time{display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);border-radius:8px;padding:6px 12px;font-size:13px;color:#c4b5fd;}
+.fr-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:var(--sky);color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;}
+.s-flying{background:linear-gradient(135deg,#0c2d48,#0d3a5e);border:1px solid rgba(14,165,233,0.4);}
+.s-ground{background:linear-gradient(135deg,#0a2a1a,#0d3320);border:1px solid rgba(16,185,129,0.4);}
+.s-sim{background:linear-gradient(135deg,#2d1b4e,#3d1f6e);border:1px solid rgba(139,92,246,0.4);}
+.s-airport{background:linear-gradient(135deg,#2d1f0d,#3d2a0f);border:1px solid rgba(245,158,11,0.4);}
+.s-rest{background:linear-gradient(135deg,#1e293b,#263348);border:1px solid rgba(100,116,139,0.3);}
+/* MAP */
+.map-container{margin-top:12px;border-radius:12px;overflow:hidden;height:200px;position:relative;border:1px solid rgba(14,165,233,0.2);}
+.map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.8);font-size:13px;color:#94a3b8;z-index:10;}
+/* COUNTDOWN */
+.countdown{margin:10px 16px 0;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:12px 15px;display:flex;align-items:center;gap:11px;font-size:14px;color:#94a3b8;line-height:1.55;}
+.countdown-icon{font-size:22px;flex-shrink:0;}
+/* CALENDAR */
+.cal-wrap{padding:13px 16px 8px;}
+.cal-days-header{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px;}
+.cal-days-header div{text-align:center;font-size:11px;font-weight:600;color:#475569;padding:4px 0;text-transform:uppercase;letter-spacing:0.04em;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-day{aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.1s;min-height:44px;border:1px solid rgba(255,255,255,0.05);}
+.cal-day:hover{transform:scale(1.07);}
+.cal-day.empty{background:transparent;cursor:default;border:none;}
+.cal-day.empty:hover{transform:none;}
+.cal-day.today{box-shadow:0 0 0 2px var(--sky);}
+.cal-day.overnight{border-bottom:3px solid var(--amber)!important;}
+.day-num{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;line-height:1;}
+.day-icon{font-size:11px;margin-top:2px;}
+/* Day type colors */
+.t-flight{background:linear-gradient(135deg,#0c2d48,#0d3a5e);border-color:rgba(14,165,233,0.3)!important;} .t-flight .day-num{color:#7dd3fc;}
+.t-layover{background:rgba(14,165,233,0.08);border-color:rgba(14,165,233,0.15)!important;} .t-layover .day-num{color:#7dd3fc;}
+.t-arrival{background:rgba(14,165,233,0.05);border-color:rgba(14,165,233,0.12)!important;} .t-arrival .day-num{color:#93c5fd;}
+.t-sim{background:linear-gradient(135deg,#2d1b4e,#3d1f6e);border-color:rgba(139,92,246,0.3)!important;} .t-sim .day-num{color:#c4b5fd;}
+.t-airport,.t-emg{background:linear-gradient(135deg,#2d1f0d,#3d2a0f);border-color:rgba(245,158,11,0.3)!important;} .t-airport .day-num,.t-emg .day-num{color:#fcd34d;}
+.t-blank{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2)!important;} .t-blank .day-num{color:#fca5a5;}
+.t-free{background:rgba(16,185,129,0.1);} .t-free .day-num{color:#6ee7b7;}
+.t-free-req{background:rgba(5,150,105,0.07);} .t-free-req .day-num{color:#34d399;}
+.t-unknown{background:rgba(100,116,139,0.08);border-color:rgba(100,116,139,0.15)!important;} .t-unknown .day-num{color:#475569;}
+/* LEGEND — single line below calendar */
+.legend{display:flex;flex-wrap:nowrap;gap:10px;padding:10px 16px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch;justify-content:center;}
+.legend::-webkit-scrollbar{display:none;}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#64748b;white-space:nowrap;flex-shrink:0;}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.leg-on{width:16px;height:9px;border-radius:2px;background:rgba(14,165,233,0.2);border-bottom:2px solid var(--amber);flex-shrink:0;}
+/* FRIDGE */
+.fridge-wrap{padding:12px 16px 32px;display:none;}
+.fridge-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px;}
+.fridge-btn{border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;}
+.fridge-btn.print{background:linear-gradient(135deg,var(--sky),var(--sky-dark));color:#fff;}
+.fridge-btn.pdf{background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.3);color:#7dd3fc;}
+.fridge-table-wrap{overflow-x:hidden;width:100%;}
+#fridgeTable{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+#fridgeTable th{padding:6px 4px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid rgba(14,165,233,0.3);overflow:hidden;}
+#fridgeTable td{padding:5px 4px;font-size:11px;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:top;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#fridgeTable th:nth-child(1),#fridgeTable td:nth-child(1){width:13%;}
+#fridgeTable th:nth-child(2),#fridgeTable td:nth-child(2){width:18%;}
+#fridgeTable th:nth-child(3),#fridgeTable td:nth-child(3){width:13%;}
+#fridgeTable th:nth-child(4),#fridgeTable td:nth-child(4){width:10%;}
+#fridgeTable th:nth-child(5),#fridgeTable td:nth-child(5){width:10%;}
+#fridgeTable th:nth-child(6),#fridgeTable td:nth-child(6){width:15%;}
+#fridgeTable th:nth-child(7),#fridgeTable td:nth-child(7){width:15%;}
+#fridgeTable th:nth-child(8),#fridgeTable td:nth-child(8){width:6%;text-align:center;}
+#fridgeTable .fd{color:#94a3b8;font-weight:700;}
+#fridgeTable .fa{font-weight:600;color:#e2e8f0;}
+#fridgeTable .ft{color:#cbd5e1;}
+#fridgeTable .fc{color:#94a3b8;}
+#fridgeTable .fon{color:var(--amber);text-align:center;}
+#fridgeTable .fdh{color:#64748b;}
+#fridgeTable .frow-today td{color:#7dd3fc;}
+/* OPS day picker */
+.ops-day-picker-btn{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:11px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background 0.2s;}
+.ops-day-picker-btn:hover{background:rgba(255,255,255,0.07);}
+.ops-day-picker-label{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:#fff;}
+.ops-day-picker-sub{font-size:11px;color:#475569;margin-top:1px;}
+.ops-day-picker-icon{font-size:16px;color:#475569;}
+/* Mini calendar modal */
+.mini-cal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;display:none;backdrop-filter:blur(3px);}
+.mini-cal-overlay.open{display:flex;align-items:flex-end;justify-content:center;}
+.mini-cal-sheet{background:#1e293b;border-radius:20px 20px 0 0;padding:20px 20px 40px;width:100%;max-width:480px;border-top:1px solid rgba(14,165,233,0.2);}
+.mini-cal-handle{width:32px;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;margin:0 auto 16px;}
+.mini-cal-title{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:14px;text-align:center;}
+.mini-cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px;}
+.mini-cal-header div{text-align:center;font-size:10px;font-weight:600;color:#475569;padding:3px 0;text-transform:uppercase;}
+.mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.mini-cal-day{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,0.04);min-height:38px;transition:transform 0.1s;}
+.mini-cal-day:hover:not(.mc-empty){transform:scale(1.08);}
+.mini-cal-day.mc-empty{background:transparent;cursor:default;border:none;}
+.mini-cal-day.mc-selected{box-shadow:0 0 0 2px var(--sky);}
+.mini-cal-day.mc-no-flight{opacity:0.4;}
+.mc-num{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;line-height:1;}
+.mc-icon{font-size:9px;margin-top:1px;}
+.ops-wrap{padding:14px 16px 32px;display:none;}
+.ops-no-flights{text-align:center;padding:40px 16px;color:#475569;font-size:14px;}
+.section-lbl{font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;}
+.flight-selector{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
+.fp{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:11px 14px;cursor:pointer;transition:all 0.2s;}
+.fp.selected{background:rgba(14,165,233,0.1);border-color:rgba(14,165,233,0.4);}
+.fp-left{display:flex;align-items:center;gap:10px;}
+.fp-num{font-family:monospace;font-size:12px;font-weight:700;color:#0ea5e9;background:rgba(14,165,233,0.1);padding:3px 8px;border-radius:6px;}
+.fp-route{font-size:13px;font-weight:600;color:#e2e8f0;}
+.fp-time{font-size:11px;color:#64748b;margin-top:1px;}
+.fp-arr{color:#334155;font-size:12px;}
+.ops-detail{display:flex;flex-direction:column;gap:12px;}
+.ops-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;}
+.ops-card-title{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.1em;padding:12px 14px 0;display:flex;align-items:center;gap:6px;}
+.ops-card-body{padding:12px 14px 14px;}
+.ac-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.oi-label{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;}
+.oi-value{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:#fff;}
+.oi-sub{font-size:11px;color:#64748b;margin-top:1px;}
+.oi-sub a{color:var(--sky);text-decoration:none;}
+.ac-status{display:flex;align-items:flex-start;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:12px;}
+.ac-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.ac-dot.green{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.6);}
+.ac-dot.amber{background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.6);}
+.ac-text{font-size:13px;color:#94a3b8;line-height:1.5;}
+.ac-text strong{color:#fff;}
+.ops-map{border-radius:10px;overflow:hidden;height:160px;position:relative;border:1px solid rgba(14,165,233,0.15);}
+.ops-map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0c1a2e;font-size:12px;color:#475569;z-index:10;}
+.ops-fr-link{position:absolute;bottom:6px;right:8px;font-size:10px;color:var(--sky);background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);border-radius:6px;padding:3px 8px;z-index:3;text-decoration:none;}
+.ops-map-note{position:absolute;bottom:6px;left:8px;font-size:9px;color:rgba(255,255,255,0.3);z-index:3;}
+/* METAR */
+.metar-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;}
+.metar-hdr{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;}
+.metar-airport{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.1em;}
+.metar-time{font-size:11px;color:#334155;}
+.metar-body{padding:12px 14px 14px;}
+.semaforo{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.sem{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sem.green{background:rgba(16,185,129,0.15);border:2px solid rgba(16,185,129,0.5);}
+.sem.amber{background:rgba(245,158,11,0.15);border:2px solid rgba(245,158,11,0.5);}
+.sem.red{background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.5);}
+.sem-text{font-size:13px;font-weight:600;color:#e2e8f0;line-height:1.3;}
+.sem-sub{font-size:12px;color:#64748b;margin-top:2px;}
+.met-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);}
+.met-item{text-align:center;}
+.met-icon{font-size:13px;margin-bottom:2px;}
+.met-val{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;color:#cbd5e1;}
+.met-lbl{font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;}
+.taf-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:8px;padding:5px 10px;font-size:11px;color:#c4b5fd;margin-top:10px;line-height:1.4;}
+.metar-loading{font-size:12px;color:#475569;padding:8px 0;text-align:center;}
+/* PANEL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;display:none;backdrop-filter:blur(2px);}
+.overlay.open{display:block;}
+.panel{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#1e293b;border-top:1px solid rgba(14,165,233,0.15);border-radius:20px 20px 0 0;padding:18px 18px 44px;z-index:200;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}
+.panel.open{transform:translateY(0);}
+.panel-handle{width:32px;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;margin:0 auto 16px;}
+.panel-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.07);border:none;color:#64748b;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;}
+.panel-date{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--sky);margin-bottom:5px;}
+.panel-title{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;margin-bottom:14px;}
+.panel-msg{background:linear-gradient(135deg,rgba(14,165,233,0.08),rgba(139,92,246,0.08));border:1px solid rgba(14,165,233,0.2);border-radius:12px;padding:13px 15px;margin-bottom:12px;font-size:14px;line-height:1.65;color:#cbd5e1;font-style:italic;}
+.info-box{background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;margin-bottom:9px;font-size:14px;line-height:1.7;color:#cbd5e1;}
+.info-box strong{color:#fff;}
+.report-box{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:11px 14px;margin-bottom:11px;font-size:14px;color:#fbbf24;line-height:1.6;}
+.flight-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;}
+.fc-route{flex:1;}
+.fc-cities{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.fc-arrow{color:var(--sky);}
+.fc-times{font-size:13px;color:#64748b;}
+.fc-num{font-family:monospace;font-size:12px;font-weight:700;color:var(--sky);background:rgba(14,165,233,0.12);padding:3px 9px;border-radius:6px;white-space:nowrap;}
+.badge{font-size:12px;padding:2px 8px;border-radius:5px;display:inline-block;margin-top:3px;}
+.badge-on{color:var(--amber);background:rgba(245,158,11,0.12);}
+.badge-dh{color:#94a3b8;background:rgba(100,116,139,0.12);}
+.local-time-box{background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:10px;padding:10px 14px;margin-bottom:9px;font-size:14px;color:#c4b5fd;display:flex;align-items:center;gap:8px;}
+.blank-note{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:11px 13px;margin-top:8px;font-size:13px;color:#fca5a5;line-height:1.65;}
+.alarm-box{background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 14px;margin-bottom:9px;font-size:14px;color:#fbbf24;}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">
+      <span class="logo-plane">✈️</span>
+      <div class="logo-text">
+        <span class="logo-name">ALF</span>
+        <span class="logo-rol">ROL DE VUELO</span>
+      </div>
+    </div>
+    <button class="alf-btn" onclick="whereIsAlf()">¿DÓNDE ESTÁ<br><span>ALF</span> AHORA?</button>
+  </div>
+  <div class="nav-row">
+    <button class="month-btn" onclick="prevMonth()">‹</button>
+    <span class="month-label" id="monthLabel"></span>
+    <button class="month-btn" onclick="nextMonth()">›</button>
+  </div>
+  <div class="view-toggle">
+    <button class="view-btn active" id="vbCal" onclick="setView('cal')">📅 Calendario</button>
+    <button class="view-btn" id="vbFridge" onclick="setView('fridge')">🖨️ Refri</button>
+    <button class="view-btn" id="vbOps" onclick="setView('ops')">✈️ OPS</button>
+  </div>
+</div>
+
+<div class="status-card" id="statusCard">
+  <button class="status-close" onclick="document.getElementById('statusCard').style.display='none'">×</button>
+  <div class="status-emoji" id="sEmoji"></div>
+  <div class="status-title" id="sTitle"></div>
+  <div class="status-detail" id="sDetail"></div>
+  <div id="sLocalTime"></div>
+  <div id="sMapContainer"></div>
+  <div id="sLink"></div>
+</div>
+
+<div class="countdown" id="countdown"><span class="countdown-icon" id="cdIcon">📆</span><span id="cdText"></span></div>
+
+<input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(event)">
+
+<!-- CALENDAR -->
+<div id="calView">
+  <div class="cal-wrap">
+    <div class="cal-days-header">
+      <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:rgba(14,165,233,0.5)"></div>Vuelo</div>
+    <div class="leg"><div class="leg-dot" style="background:rgba(139,92,246,0.5)"></div>Simulador</div>
+    <div class="leg"><div class="leg-dot" style="background:rgba(245,158,11,0.4)"></div>Turno</div>
+    <div class="leg"><div class="leg-dot" style="background:rgba(16,185,129,0.4)"></div>Libre</div>
+    <div class="leg"><div class="leg-dot" style="background:rgba(239,68,68,0.25)"></div>Blanco</div>
+    <div class="leg"><div class="leg-on"></div>Pernocte</div>
+    <div class="leg"><div class="leg-dot" style="background:rgba(100,116,139,0.2)"></div>Sin info</div>
+  </div>
+</div>
+
+<!-- FRIDGE -->
+<div class="fridge-wrap" id="fridgeView">
+  <div class="fridge-table-wrap" id="fridgeTableWrap">
+    <table id="fridgeTable">
+      <thead><tr><th>Fecha</th><th>Actividad</th><th>Vuelo</th><th>Salida</th><th>Llegada</th><th>Desde</th><th>Hasta</th><th>🌙</th></tr></thead>
+      <tbody id="fridgeTbody"></tbody>
+    </table>
+  </div>
+  <div class="fridge-btn-row">
+    <button class="fridge-btn print" onclick="printFridge()">🖨️ Imprimir</button>
+    <button class="fridge-btn pdf" onclick="savePDF()">📄 Guardar PDF</button>
+  </div>
+</div>
+
+<!-- OPS -->
+<div class="ops-wrap" id="opsView">
+  <div id="opsContent"></div>
+</div>
+
+<!-- MINI CAL PICKER -->
+<div class="mini-cal-overlay" id="miniCalOverlay" onclick="closeMiniCal(event)">
+  <div class="mini-cal-sheet" onclick="event.stopPropagation()">
+    <div class="mini-cal-handle"></div>
+    <div class="mini-cal-title" id="miniCalTitle"></div>
+    <div class="mini-cal-header">
+      <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+    </div>
+    <div class="mini-cal-grid" id="miniCalGrid"></div>
+  </div>
+</div>
+
+<!-- OVERLAY + PANEL -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <button class="panel-close" onclick="closePanel()">×</button>
+  <div class="panel-handle"></div>
+  <div class="panel-date" id="panelDate"></div>
+  <div class="panel-title" id="panelTitle"></div>
+  <div id="panelBody"></div>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────
+const CITIES={SCL:"Santiago",ANF:"Antofagasta",CJC:"Calama",GRU:"São Paulo",PMC:"Puerto Montt",LSC:"La Serena",CCP:"Concepción",ZCO:"Temuco",IQQ:"Iquique",ARI:"Arica",BBA:"Balmaceda",LPB:"La Paz",MVD:"Montevideo",EZE:"Buenos Aires",LIM:"Lima",BOG:"Bogotá",MIA:"Miami",MAD:"Madrid"};
+const ICAO={SCL:"SCEL",ANF:"SCFA",CJC:"SCCF",GRU:"SBGR",PMC:"SCTE",LSC:"SCSE",CCP:"SCIE",ZCO:"SCQP",IQQ:"SCDA",ARI:"SCAR",BBA:"SCBA",LPB:"SLLP",MVD:"SUMU",EZE:"SAEZ",LIM:"SPJC",BOG:"SKBO",MIA:"KMIA",MAD:"LEMD"};
+const AC_T={"321":"Airbus A321","320":"Airbus A320","31R":"Airbus A319/321","328":"Airbus A320 Neo","B738":"Boeing 737-800","789":"Boeing 787-9"};
+const MONTHS=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DAYS_S=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DAYS_F=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const TYPE_ICON={flight:"✈️",layover:"🏨",arrival:"🛬",sim:"🎮",airport:"🏢",emg:"📋",blank:"📞",free:"","free-req":"",unknown:"❓"};
+const TYPE_LBL={flight:"Vuelo",layover:"Pernocte",arrival:"Llegada madrugada",sim:"Simulador",airport:"Turno",emg:"Capacitación",blank:"Blanco",free:"Libre","free-req":"Libre requerido",unknown:"Sin información"};
+const AIRPORT_COORDS={SCL:[-33.393,-70.786],ANF:[-23.444,-70.445],CJC:[-22.498,-68.904],GRU:[-23.432,-46.469],PMC:[-41.438,-73.094],LSC:[-29.916,-71.199],CCP:[-36.772,-73.059],ZCO:[-38.769,-72.637],IQQ:[-20.535,-70.181],ARI:[-18.348,-70.338],BBA:[-45.916,-71.686],LPB:[-16.514,-68.192],MVD:[-34.838,-56.031],EZE:[-34.822,-58.535],LIM:[-12.022,-77.114],BOG:[4.701,-74.147],MIA:[25.796,-80.287],MAD:[40.472,-3.561]};
+const TZ_OFFSET={SCL:-4,ANF:-4,CJC:-4,PMC:-4,LSC:-4,CCP:-4,ZCO:-4,IQQ:-5,ARI:-5,BBA:-4,GRU:-3,MVD:-3,EZE:-3,LIM:-5,BOG:-5,MIA:-4,MAD:2,LPB:-4};
+
+function city(c){return CITIES[c?.trim()]||c||"";}
+function toMin(t){if(!t)return 0;const[h,m]=(t+"").replace(/[^\d:]/g,"").split(":").map(Number);return(h||0)*60+(m||0);}
+function hasON(d){return d&&(d.overnight||d.flights?.some(f=>f.overnight));}
+function fmtHome(rt){const rm=toMin(rt)-75;const h=Math.floor(((rm%1440)+1440)%1440/60).toString().padStart(2,"0");const m=(((rm%1440)+1440)%1440%60).toString().padStart(2,"0");return h+":"+m;}
+function fmtAlarm(fd){const rm=toMin(fd)-210;const h=Math.floor(((rm%1440)+1440)%1440/60);const m=(((rm%1440)+1440)%1440%60).toString().padStart(2,"0");return h+":"+m;}
+function isEarlyFlight(fd){const am=toMin(fd)-210;const ah=Math.floor(((am%1440)+1440)%1440/60);return ah<6;}
+function getLocalTime(code){const off=TZ_OFFSET[code];if(off===undefined)return null;const now=new Date();const utc=now.getTime()+now.getTimezoneOffset()*60000;const local=new Date(utc+off*3600000);return local.getHours().toString().padStart(2,"0")+":"+local.getMinutes().toString().padStart(2,"0");}
+
+// ── MESSAGES ───────────────────────────────────────────────
+function getDayMessage(dd){
+  if(!dd)return null;
+  const t=dd.type;
+  if(t==="free"||t==="free-req"||t==="unknown")return null;
+  if(t==="arrival")return`😴 Alf llegó de madrugada con el vuelo ${dd.fromFlight?.num}. Merece descansar, ¡no lo llamen muy temprano!`;
+  if(t==="layover"){const lt=getLocalTime(dd.city);const ls=lt?` Son las ${lt} hora local.`:"";return`🌙 Esta noche Alf duerme en ${dd.cityName}.${ls} Regresa mañana.`;}
+  if(t==="blank")return`📞 Alf está de blanco: la aerolínea puede llamarlo en cualquier momento entre las 03:00 y 21:00. Si no llaman antes de las 21:00 del día anterior, ¡queda libre!`;
+  if(t==="airport")return`🏢 Alf tiene turno de guardia en el aeropuerto. Está disponible si alguna tripulación lo necesita como refuerzo.`;
+  if(t==="emg")return`📋 Hoy toca capacitación obligatoria en emergencias. Entrenamiento en tierra, sin aviones ni pasajeros.`;
+  if(t==="sim"){
+    if(dd.simType==="LOE")return`🎮 ¡Hoy es el examen del simulador! El LOE es la evaluación más importante del año. Alf lo tiene bien preparado. 💪`;
+    if(dd.simType==="MV")return`🎮 Hoy practica maniobras de vuelo en el simulador. Una réplica exacta de la cabina, sin riesgos reales.`;
+    return`🎮 Alf tiene simulador hoy — entrenamiento en tierra en una réplica exacta de la cabina.`;
+  }
+  if(dd.flights?.length){
+    const op=dd.flights.filter(f=>!f.dh);const fc=op.length;
+    const fd=op[0]?.depTime;const isEarly=fd&&isEarlyFlight(fd);
+    const alarm=fd?fmtAlarm(fd):"";
+    const dests=[...new Set(op.map(f=>city(f.arr)).filter(c=>c!=="Santiago"))];
+    if(isEarly)return`⏰ ¡Día de madrugón! El despertador suena a las ${alarm}. ${fc===1?"Un vuelo hoy":fc+" vuelos hoy"}${dests.length?` — pasa por ${dests.join(" y ")}`:""}.`;
+    if(fc>=4)return`✈️ ¡Día intenso! ${fc} vuelos hoy${dests.length?` pasando por ${dests.join(", ")}`:""} — pero Alf está en su elemento, haciendo lo que más le gusta. 😄`;
+    if(hasON(dd)){const lf=op[op.length-1];return`🌙 Hoy Alf viaja a ${city(lf?.arr)} y no vuelve a casa esta noche. Pernocta en hotel de LATAM.`;}
+    return`✈️ ${fc===1?"Un vuelo hoy":"Varios vuelos hoy"} — sale a las ${fd}${dests.length?` hacia ${dests[0]}`:""}.`;
+  }
+  return null;
+}
+
+// ── OPENSKY MAP (status card) ──────────────────────────────
+let mapInstance=null;
+function destroyMap(){if(mapInstance){mapInstance.remove();mapInstance=null;}}
+
+async function showFlightMap(flight,containerId){
+  const container=document.getElementById(containerId);
+  if(!container)return;
+  container.innerHTML=`<div class="map-container"><div class="map-loading" id="mapLoading${containerId}">🛰️ Buscando posición...</div><div id="leafletMap${containerId}" style="width:100%;height:200px;"></div></div>`;
+  const depC=AIRPORT_COORDS[flight.dep],arrC=AIRPORT_COORDS[flight.arr];
+  if(!depC||!arrC){container.innerHTML="";return;}
+  const now=new Date(),cur=now.getHours()*60+now.getMinutes();
+  const prog=Math.max(0,Math.min(1,(cur-toMin(flight.depTime))/(toMin(flight.arrTime)+(flight.nextDay?1440:0)-toMin(flight.depTime))));
+  const estLat=depC[0]+(arrC[0]-depC[0])*prog,estLng=depC[1]+(arrC[1]-depC[1])*prog;
+  destroyMap();
+  await new Promise(r=>setTimeout(r,100));
+  try{
+    mapInstance=L.map("leafletMap"+containerId,{zoomControl:false,attributionControl:false}).setView([estLat,estLng],5);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19}).addTo(mapInstance);
+    L.polyline([depC,[estLat,estLng],arrC],{color:"#0ea5e9",weight:2,opacity:0.6,dashArray:"6,4"}).addTo(mapInstance);
+    const ai=L.divIcon({html:`<div style="width:8px;height:8px;border-radius:50%;background:#0ea5e9;border:2px solid #fff;box-shadow:0 0 6px rgba(14,165,233,0.8)"></div>`,iconSize:[8,8],iconAnchor:[4,4],className:""});
+    L.marker(depC,{icon:ai}).addTo(mapInstance).bindTooltip(city(flight.dep),{permanent:true,direction:"bottom",offset:[0,4]});
+    L.marker(arrC,{icon:ai}).addTo(mapInstance).bindTooltip(city(flight.arr),{permanent:true,direction:"bottom",offset:[0,4]});
+    let realPos=null;
+    try{
+      const resp=await fetch(`https://opensky-network.org/api/states/all?callsign=${encodeURIComponent(flight.num.trim())}`,{signal:AbortSignal.timeout(5000)});
+      if(resp.ok){const data=await resp.json();if(data.states?.length){const s=data.states[0];if(s[6]&&s[5])realPos={lat:s[6],lng:s[5],heading:s[10]||0};}}
+    }catch(e){}
+    const pos=realPos||{lat:estLat,lng:estLng,heading:0};
+    const pi=L.divIcon({html:`<div style="font-size:24px;transform:rotate(${pos.heading}deg);filter:drop-shadow(0 0 8px rgba(14,165,233,0.9))">✈️</div>`,iconSize:[30,30],iconAnchor:[15,15],className:""});
+    L.marker([pos.lat,pos.lng],{icon:pi}).addTo(mapInstance);
+    mapInstance.setView([pos.lat,pos.lng],5);
+    const ld=document.getElementById("mapLoading"+containerId);if(ld)ld.style.display="none";
+    const note=document.createElement("div");
+    note.style.cssText="position:absolute;bottom:6px;left:8px;font-size:9px;color:rgba(255,255,255,0.3);z-index:1000;pointer-events:none;";
+    note.textContent=realPos?"📡 Posición real via OpenSky":"📍 Posición estimada por horario";
+    container.querySelector(".map-container").style.position="relative";
+    container.querySelector(".map-container").appendChild(note);
+  }catch(e){const ld=document.getElementById("mapLoading"+containerId);if(ld)ld.style.display="none";}
+}
+
+// ── OPS MAP (aircraft incoming) ────────────────────────────
+let opsMapInstance=null;
+function destroyOpsMap(){if(opsMapInstance){opsMapInstance.remove();opsMapInstance=null;}}
+
+async function showAircraftMap(fromCode,toCode,mapDivId){
+  const fromC=AIRPORT_COORDS[fromCode],toC=AIRPORT_COORDS[toCode];
+  if(!fromC||!toC)return;
+  destroyOpsMap();
+  await new Promise(r=>setTimeout(r,80));
+  try{
+    opsMapInstance=L.map(mapDivId,{zoomControl:false,attributionControl:false}).setView([(fromC[0]+toC[0])/2,(fromC[1]+toC[1])/2],5);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19}).addTo(opsMapInstance);
+    L.polyline([fromC,toC],{color:"#0ea5e9",weight:2,opacity:0.5,dashArray:"5,4"}).addTo(opsMapInstance);
+    const ai=L.divIcon({html:`<div style="width:7px;height:7px;border-radius:50%;background:#0ea5e9;border:2px solid #fff"></div>`,iconSize:[7,7],iconAnchor:[3,3],className:""});
+    L.marker(fromC,{icon:ai}).addTo(opsMapInstance).bindTooltip(city(fromCode),{permanent:true,direction:"top",offset:[0,-4]});
+    L.marker(toC,{icon:ai}).addTo(opsMapInstance).bindTooltip(city(toCode),{permanent:true,direction:"top",offset:[0,-4]});
+    // Plane at destination (just arrived)
+    const pi=L.divIcon({html:`<div style="font-size:20px;filter:drop-shadow(0 0 6px rgba(14,165,233,0.8))">✈️</div>`,iconSize:[24,24],iconAnchor:[12,12],className:""});
+    L.marker(toC,{icon:pi}).addTo(opsMapInstance);
+    opsMapInstance.fitBounds([fromC,toC],{padding:[20,20]});
+  }catch(e){}
+}
+
+// ── METAR/TAF via AVWX ─────────────────────────────────────
+async function fetchMetar(icao){
+  try{
+    const resp=await fetch(`https://avwx.rest/api/metar/${icao}?token=demo&options=translate`,{signal:AbortSignal.timeout(6000)});
+    if(!resp.ok)return null;
+    return await resp.json();
+  }catch(e){return null;}
+}
+async function fetchTaf(icao){
+  try{
+    const resp=await fetch(`https://avwx.rest/api/taf/${icao}?token=demo&options=translate`,{signal:AbortSignal.timeout(6000)});
+    if(!resp.ok)return null;
+    return await resp.json();
+  }catch(e){return null;}
+}
+
+function metarSemaphore(data){
+  if(!data)return{cls:"amber",icon:"🟡",text:"Sin datos disponibles",sub:""};
+  const vis=data.visibility?.value||10;
+  const wind=data.wind_speed?.value||0;
+  const gust=data.wind_gust?.value||0;
+  const wx=data.wx_codes?.map(w=>w.value).join(" ")||"";
+  const ceil=data.clouds?.find(c=>c.type==="BKN"||c.type==="OVC")?.altitude||9999;
+  if(wx.match(/TS|SN|FG|FZRA/)||vis<1.5||ceil<300||gust>35)return{cls:"red",icon:"🔴",text:"Condiciones complejas",sub:wx||`Visibilidad ${vis}km, techo ${ceil}ft`};
+  if(wind>20||gust>25||vis<5||ceil<1500)return{cls:"amber",icon:"🟡",text:"Atención",sub:wind>20?`Viento ${wind}kt${gust?`, ráfagas ${gust}kt`:""}`:vis<5?`Visibilidad reducida ${vis}km`:""};
+  return{cls:"green",icon:"🟢",text:"Condiciones buenas",sub:"Sin restricciones operacionales"};
+}
+
+function renderMetarCard(data,tafData,label,time){
+  if(!data)return`<div class="metar-card"><div class="metar-hdr"><span class="metar-airport">${label}</span><span class="metar-time">${time}</span></div><div class="metar-body"><div class="metar-loading">⏳ Cargando...</div></div></div>`;
+  const sem=metarSemaphore(data);
+  const wind=data.wind_speed?.value?`${data.wind_speed.value} kt · ${data.wind_direction?.value||"VRB"}°`:"—";
+  const vis=data.visibility?.value?`${data.visibility.value} km`:"—";
+  const cloud=data.clouds?.length?`${data.clouds[0].type} ${data.clouds[0].altitude}ft`:"CAVOK";
+  const tafNote=tafData?.forecast?.[0]?.summary||"Sin cambios significativos previstos";
+  return`<div class="metar-card">
+    <div class="metar-hdr"><span class="metar-airport">${label}</span><span class="metar-time">${time}</span></div>
+    <div class="metar-body">
+      <div class="semaforo"><div class="sem ${sem.cls}">${sem.icon}</div><div><div class="sem-text">${sem.text}</div><div class="sem-sub">${sem.sub}</div></div></div>
+      <div class="met-grid">
+        <div class="met-item"><div class="met-icon">💨</div><div class="met-val">${wind}</div><div class="met-lbl">Viento</div></div>
+        <div class="met-item"><div class="met-icon">👁️</div><div class="met-val">${vis}</div><div class="met-lbl">Visibilidad</div></div>
+        <div class="met-item"><div class="met-icon">☁️</div><div class="met-val">${cloud}</div><div class="met-lbl">Nubes</div></div>
+      </div>
+      <div class="taf-badge">📋 TAF: ${tafNote}</div>
+    </div>
+  </div>`;
+}
+
+// ── ROSTER DATA ────────────────────────────────────────────
+const STORAGE_KEY="alf-roster-v2";
+let allMonths={};
+allMonths["2026-6"]={year:2026,month:6,flyingHrs:"47:49",dutyHrs:"101:10",days:{
+  1:{type:"flight",reportTime:"17:52",overnight:false,flights:[
+    {num:"LA344",dep:"SCL",arr:"ANF",depTime:"18:48",arrTime:"20:48",ac:"321",dh:false},
+    {num:"LA349",dep:"ANF",arr:"SCL",depTime:"21:34",arrTime:"23:23",ac:"321",dh:false}]},
+  2:{type:"flight",reportTime:"19:52",overnight:false,flights:[
+    {num:"LA382",dep:"SCL",arr:"CJC",depTime:"20:44",arrTime:"22:55",ac:"321",dh:false},
+    {num:"LA393",dep:"CJC",arr:"SCL",depTime:"23:34",arrTime:"01:40",ac:"321",dh:false,nextDay:true}]},
+  3:{type:"arrival",fromFlight:{num:"LA393",dep:"CJC",arr:"SCL",arrTime:"01:40"},flights:[]},
+  4:{type:"flight",reportTime:"10:22",overnight:false,flights:[
+    {num:"LA360",dep:"SCL",arr:"ANF",depTime:"11:27",arrTime:"13:37",ac:"321",dh:false},
+    {num:"LA361",dep:"ANF",arr:"SCL",depTime:"14:19",arrTime:"16:16",ac:"321",dh:false},
+    {num:"LA201",dep:"SCL",arr:"CCP",depTime:"18:20",arrTime:"19:20",ac:"321",dh:false},
+    {num:"LA014",dep:"CCP",arr:"SCL",depTime:"20:10",arrTime:"21:13",ac:"321",dh:false}]},
+  5:{type:"free",flights:[]},6:{type:"free",flights:[]},7:{type:"free",flights:[]},
+  8:{type:"free",flights:[]},9:{type:"free",flights:[]},10:{type:"free",flights:[]},
+  11:{type:"flight",reportTime:"13:36",overnight:true,flights:[
+    {num:"LA110",dep:"SCL",arr:"LSC",depTime:"14:45",arrTime:"15:58",ac:"321",dh:false},
+    {num:"LA111",dep:"LSC",arr:"SCL",depTime:"16:38",arrTime:"17:36",ac:"321",dh:false},
+    {num:"LA607",dep:"SCL",arr:"GRU",depTime:"19:21",arrTime:"23:31",ac:"320",dh:false,overnight:true}]},
+  12:{type:"layover",city:"GRU",cityName:"São Paulo",flights:[]},
+  13:{type:"flight",reportTime:"06:00",overnight:false,flights:[
+    {num:"LA757",dep:"GRU",arr:"SCL",depTime:"07:17",arrTime:"11:20",ac:"321",dh:false}]},
+  14:{type:"airport",hours:["07:00","14:10"],reportTime:"07:00",flights:[],
+    detail:"Turno de guardia en el aeropuerto. Alf está disponible si una tripulación necesita refuerzo."},
+  15:{type:"flight",reportTime:"03:39",overnight:true,flights:[
+    {num:"LA057",dep:"SCL",arr:"PMC",depTime:"04:28",arrTime:"06:17",ac:"321",dh:false},
+    {num:"LA056",dep:"PMC",arr:"SCL",depTime:"07:05",arrTime:"08:41",ac:"321",dh:false},
+    {num:"LA063",dep:"SCL",arr:"PMC",depTime:"10:26",arrTime:"12:20",ac:"321",dh:true,overnight:true}]},
+  16:{type:"flight",reportTime:"05:31",overnight:false,flights:[
+    {num:"LA058",dep:"PMC",arr:"SCL",depTime:"06:15",arrTime:"08:01",ac:"320",dh:false},
+    {num:"LA146",dep:"SCL",arr:"CJC",depTime:"09:49",arrTime:"11:54",ac:"321",dh:false},
+    {num:"LA145",dep:"CJC",arr:"SCL",depTime:"12:38",arrTime:"14:40",ac:"321",dh:false}]},
+  17:{type:"emg",hours:["08:00","17:00"],flights:[],
+    detail:"Capacitación en emergencias generales. Entrenamiento obligatorio en tierra."},
+  18:{type:"flight",reportTime:"10:06",overnight:false,flights:[
+    {num:"LA035",dep:"SCL",arr:"ZCO",depTime:"11:03",arrTime:"12:37",ac:"321",dh:false},
+    {num:"LA034",dep:"ZCO",arr:"SCL",depTime:"13:16",arrTime:"14:33",ac:"321",dh:false},
+    {num:"LA380",dep:"SCL",arr:"CJC",depTime:"15:18",arrTime:"17:22",ac:"321",dh:false},
+    {num:"LA375",dep:"CJC",arr:"SCL",depTime:"18:13",arrTime:"20:26",ac:"321",dh:false}]},
+  19:{type:"free",flights:[]},20:{type:"free",flights:[]},21:{type:"free",flights:[]},
+  22:{type:"free-req",flights:[]},23:{type:"free-req",flights:[]},
+  24:{type:"free-req",flights:[]},25:{type:"free-req",flights:[]},
+  26:{type:"sim",simType:"APT",hours:["11:00","15:00"],flights:[],
+    detail:"Simulador APT — Entrenamiento de Procedimientos en Aeropuerto."},
+  27:{type:"sim",simType:"MV",hours:["06:50","10:50"],flights:[],
+    detail:"Simulador MV — Maniobras de Vuelo."},
+  28:{type:"sim",simType:"LOE",hours:["15:10","19:10"],flights:[],
+    detail:"Simulador LOE — Evaluación Operacional en Línea. Es el examen del simulador."},
+  29:{type:"blank",hours:["03:00","21:00"],flights:[],
+    detail:"Alf está de blanco: disponible para ser llamado en cualquier momento dentro de la franja 03:00–21:00."}
+  // Day 30 intentionally omitted — will show as "unknown"
+}};
+
+// ── STORAGE ────────────────────────────────────────────────
+function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(allMonths));}catch(e){}}
+function loadData(){try{const s=localStorage.getItem(STORAGE_KEY);if(s){const p=JSON.parse(s);Object.assign(allMonths,p);}}catch(e){}}
+
+let curMonth=6,curYear=2026,curView="cal",selectedOpsDay=null,selectedOpsFlight=null;
+const today=new Date();
+function getRoster(){return allMonths[curYear+"-"+curMonth]||null;}
+
+// ── EXCEL PARSER ───────────────────────────────────────────
+function parseExcel(buffer){
+  const wb=XLSX.read(new Uint8Array(buffer),{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+  let flyingHrs="",dutyHrs="";
+  for(let i=0;i<Math.min(5,rows.length);i++){
+    const j=rows[i].join(" ");
+    const fh=j.match(/FLYING HRS\s*([\d:]+)/i);const dh2=j.match(/DUTY HRS\s*([\d:]+)/i);
+    if(fh)flyingHrs=fh[1];if(dh2)dutyHrs=dh2[1];
+  }
+  let hi=rows.findIndex(r=>r.some(c=>String(c).includes("Date")||String(c).includes("Item")));
+  if(hi<0)hi=1;
+  const days={};let curDate=null;
+  const mmap={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];const rd=String(r[0]||"").trim();
+    if(rd.match(/\d{2}-[A-Za-z]{3}-\d{4}/)){const p=rd.split("-");curDate={d:parseInt(p[0]),m:mmap[p[1].toLowerCase()]||6,y:parseInt(p[2])};}
+    if(!curDate)continue;
+    const key=curDate.y+"-"+curDate.m+"-"+curDate.d;
+    const pairing=String(r[1]||"").trim(),report=String(r[2]||"").trim(),flNum=String(r[3]||"").trim();
+    const wt=String(r[5]||"").trim(),depRaw=String(r[7]||"").trim(),arrRaw=String(r[8]||"").trim(),ac=String(r[14]||"").trim();
+    const isFL=!!flNum.match(/^[A-Z]{2}\d+$/);const actU=pairing.toUpperCase();
+    const parseLeg=raw=>{const m=raw.match(/([A-Z]{3})\s+(\d{1,2}:\d{2})/);return m?{code:m[1],time:m[2]}:{code:"",time:""};};
+    const dep=parseLeg(depRaw),arr2=parseLeg(arrRaw);const nextDay=arrRaw.includes("+1");
+    if(!days[key]){
+      let type="free";
+      if(actU==="DO")type="free";else if(actU==="DR")type="free-req";else if(actU.startsWith("ASB"))type="airport";
+      else if(actU.match(/^R[A-Z]+_CL/))type="sim";else if(actU==="B")type="blank";else if(actU==="EMG")type="emg";else if(isFL)type="flight";
+      let simType="";
+      if(type==="sim"){if(actU.includes("APT"))simType="APT";else if(actU.includes("MV"))simType="MV";else if(actU.includes("LOE"))simType="LOE";else simType=pairing.replace(/[^A-Z]/g,"");}
+      days[key]={type,month:curDate.m,year:curDate.y,day:curDate.d,reportTime:report||null,flights:[],simType,hours:null,detail:"",overnight:false};
+    }
+    const de=days[key];
+    if(isFL&&de.type==="free")de.type="flight";
+    if(dep.time&&arr2.time&&!isFL)de.hours=[dep.time,arr2.time];
+    if(isFL&&dep.code&&arr2.code){
+      const on=nextDay||arrRaw.includes("SI");
+      de.flights.push({num:flNum,dep:dep.code,arr:arr2.code,depTime:dep.time,arrTime:arr2.time,nextDay,ac,dh:wt==="PS",overnight:on});
+      if(on)de.overnight=true;
+    }
+  }
+  const keys=Object.keys(days).sort();
+  for(let i=1;i<keys.length;i++){
+    const prev=days[keys[i-1]],curr=days[keys[i]];if(!prev||!curr)continue;
+    const ndBase=prev.flights?.find(f=>f.nextDay&&f.arr==="SCL");
+    const ndOther=prev.flights?.find(f=>f.nextDay&&f.arr!=="SCL");
+    if(ndBase&&!curr.flights?.length&&curr.type==="free"){curr.type="arrival";curr.fromFlight={num:ndBase.num,dep:ndBase.dep,arr:ndBase.arr,arrTime:ndBase.arrTime};}
+    else if(ndOther&&!curr.flights?.length&&curr.type==="free"){curr.type="layover";curr.cityName=city(ndOther.arr);curr.city=ndOther.arr;}
+    else if(prev.overnight&&!curr.flights?.length&&curr.type==="free"){const lf=prev.flights[prev.flights.length-1];if(lf){curr.type="layover";curr.cityName=city(lf.arr);curr.city=lf.arr;}}
+  }
+  const months={};
+  Object.values(days).forEach(d=>{const mk=d.year+"-"+d.month;if(!months[mk])months[mk]={year:d.year,month:d.month,flyingHrs,dutyHrs,days:{}};months[mk].days[d.day]=d;});
+  return months;
+}
+
+async function handleFile(e){
+  const file=e.target.files[0];if(!file)return;
+  try{
+    const buf=await file.arrayBuffer();const months=parseExcel(buf);
+    Object.assign(allMonths,months);saveData();
+    const keys=Object.keys(months);
+    if(keys.length){const[y,m]=keys[0].split("-").map(Number);curYear=y;curMonth=m;}
+    renderAll();
+  }catch(err){console.error(err);}
+  e.target.value="";
+}
+
+// ── NAV & VIEWS ────────────────────────────────────────────
+function prevMonth(){if(curMonth===1){curMonth=12;curYear--;}else curMonth--;renderAll();}
+function nextMonth(){if(curMonth===12){curMonth=1;curYear++;}else curMonth++;renderAll();}
+
+function setView(v){
+  curView=v;
+  document.getElementById("calView").style.display=v==="cal"?"block":"none";
+  document.getElementById("fridgeView").style.display=v==="fridge"?"block":"none";
+  document.getElementById("opsView").style.display=v==="ops"?"block":"none";
+  document.getElementById("countdown").style.display=v==="ops"?"none":"flex";
+  ["Cal","Fridge","Ops"].forEach(x=>{document.getElementById("vb"+x).classList.toggle("active",x.toLowerCase()===v);});
+  if(v==="ops")renderOps();
+}
+
+function renderAll(){
+  document.getElementById("monthLabel").textContent=MONTHS[curMonth-1]+" "+curYear;
+  renderCalendar();renderFridge();renderCountdown();
+  if(curView==="ops")renderOps();
+}
+
+// ── CALENDAR ───────────────────────────────────────────────
+function renderCalendar(){
+  const roster=getRoster();
+  const dim=new Date(curYear,curMonth,0).getDate();
+  const fd=new Date(curYear,curMonth-1,1).getDay();
+  const off=fd===0?6:fd-1;
+  let html="";
+  for(let i=0;i<off;i++)html+='<div class="cal-day empty"></div>';
+  for(let d=1;d<=dim;d++){
+    const dd=roster?.days[d];
+    // Key logic: if roster exists but day is missing → unknown
+    const type = roster ? (dd?.type||"unknown") : "unknown";
+    const isToday=today.getDate()===d&&today.getMonth()+1===curMonth&&today.getFullYear()===curYear;
+    const on=hasON(dd);
+    html+=`<div class="cal-day t-${type}${on?" overnight":""}${isToday?" today":""}" onclick="showDay(${d})">
+      <span class="day-num">${d}</span><span class="day-icon">${TYPE_ICON[type]||""}</span>
+    </div>`;
+  }
+  document.getElementById("calGrid").innerHTML=html;
+}
+
+// ── FRIDGE ─────────────────────────────────────────────────
+function renderFridge(){
+  const roster=getRoster();
+  const dim=new Date(curYear,curMonth,0).getDate();
+  let html="";
+  for(let d=1;d<=dim;d++){
+    const dd=roster?.days[d];
+    const type=roster?(dd?.type||"unknown"):"unknown";
+    const date=new Date(curYear,curMonth-1,d);
+    const dn=DAYS_S[date.getDay()];
+    const isToday=today.getDate()===d&&today.getMonth()+1===curMonth&&today.getFullYear()===curYear;
+    const tc=isToday?" frow-today":"";
+    if(type==="unknown"){
+      html+=`<tr class="${tc}"><td class="fd">${d} ${dn}</td><td style="color:#475569;font-style:italic">Por confirmar</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+    } else if(!dd||type==="free"||type==="free-req"){
+      html+=`<tr class="${tc}"><td class="fd">${d} ${dn}</td><td class="fa" style="color:#4b5563">${type==="free-req"?"DÍA LIBRE (REQUERIDO)":"DÍA LIBRE"}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+    } else if(type==="arrival"){
+      html+=`<tr class="${tc}"><td class="fd">${d} ${dn}</td><td class="fdh">🛬 LLEGADA MADRUGADA</td><td class="ft">${dd.fromFlight?.num||""}</td><td></td><td class="ft">${dd.fromFlight?.arrTime||""}</td><td></td><td class="fc">${city(dd.fromFlight?.arr)}</td><td></td></tr>`;
+    } else if(type==="layover"){
+      html+=`<tr class="${tc}"><td class="fd">${d} ${dn}</td><td class="fa">🏨 PERNOCTE ${(dd.cityName||"").toUpperCase()}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+    } else if(type==="sim"||type==="airport"||type==="emg"||type==="blank"){
+      const lm={sim:`SIMULADOR (${dd.simType})`,airport:"TURNO AEROPUERTO",emg:"EMERGENCIAS GENERALES",blank:"BLANCO"};
+      html+=`<tr class="${tc}"><td class="fd">${d} ${dn}</td><td class="fa">${lm[type]||type.toUpperCase()}</td><td></td><td class="ft">${dd.hours?.[0]||""}</td><td class="ft">${dd.hours?.[1]||""}</td><td></td><td></td><td></td></tr>`;
+    } else if(dd?.flights?.length){
+      dd.flights.forEach((f,fi)=>{
+        html+=`<tr class="${tc}"><td class="fd">${fi===0?d+" "+dn:""}</td><td class="${f.dh?"fdh":"fa"}">${f.dh?"PASAJERO":""}</td><td class="ft">${f.num}</td><td class="ft">${f.depTime}</td><td class="ft">${f.arrTime}${f.nextDay?" (+1)":""}</td><td class="fc">${city(f.dep)}</td><td class="fc">${city(f.arr)}</td><td class="fon">${f.overnight?"🌙":""}</td></tr>`;
+      });
+    }
+  }
+  document.getElementById("fridgeTbody").innerHTML=html;
+}
+
+function savePDF(){
+  const ml=MONTHS[curMonth-1]+" "+curYear;
+  const tbl=document.getElementById("fridgeTableWrap").innerHTML;
+  const w=window.open("","_blank");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rol Alf – ${ml}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11pt;color:#000;padding:20px;max-width:700px;margin:0 auto;}
+    h2{font-size:16pt;margin:0 0 4px}p{font-size:10pt;color:#555;margin:0 0 14px}
+    table{width:100%;border-collapse:collapse}
+    th{background:#0369a1;color:#fff;padding:6px 7px;font-size:10pt;text-align:left}
+    td{padding:5px 7px;font-size:10pt;border-bottom:1px solid #e5e7eb;vertical-align:top}
+    tr:nth-child(even) td{background:#f8fafc}
+    .fdh{color:#9ca3af}.fa{font-weight:700}.ft{color:#374151}.fc{color:#6b7280}.fon{color:#d97706;text-align:center}
+    .tip{margin-top:24px;padding:12px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:10pt;color:#0369a1;}
+  </style></head><body>
+  <h2>✈️ Rol de Alf – ${ml}</h2>
+  <p>Primer Oficial LATAM · Generado el ${new Date().toLocaleDateString("es-CL")}</p>
+  ${tbl}
+  <div class="tip">💡 Para guardar como PDF: toca el botón compartir <strong>⬆️</strong> de Safari → "Opciones" → "PDF" → "Guardar en Archivos" o comparte por WhatsApp.</div>
+  </body></html>`);
+  w.document.close();
+}
+
+function printFridge(){
+  const ml=MONTHS[curMonth-1]+" "+curYear;
+  const tbl=document.getElementById("fridgeTableWrap").innerHTML;
+  const w=window.open("","_blank");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rol Alf – ${ml}</title><style>@page{size:letter portrait;margin:15mm 12mm}body{font-family:Arial,sans-serif;font-size:10pt;color:#000}h2{font-size:14pt;margin:0 0 3px}p{font-size:9pt;color:#555;margin:0 0 10px}table{width:100%;border-collapse:collapse}th{background:#0369a1;color:#fff;padding:5px 6px;font-size:9pt;text-align:left}td{padding:4px 6px;font-size:9pt;border-bottom:1px solid #e5e7eb;vertical-align:top}tr:nth-child(even) td{background:#f8fafc}.fdh{color:#9ca3af}.fa{font-weight:700}.ft{color:#374151}.fc{color:#6b7280}.fon{color:#d97706;text-align:center}.frow-today td{background:#eff6ff!important}</style></head><body><h2>✈️ Rol de Alf – ${ml}</h2><p>Primer Oficial LATAM · Impreso el ${new Date().toLocaleDateString("es-CL")}</p>${tbl}</body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(),400);
+}
+
+// ── OPS VIEW ───────────────────────────────────────────────
+function renderOps(){
+  destroyOpsMap();
+  const roster=getRoster();
+
+  // Default to today if in current month, else day 1
+  if(!selectedOpsDay){
+    if(curMonth===today.getMonth()+1&&curYear===today.getFullYear()) selectedOpsDay=today.getDate();
+    else selectedOpsDay=1;
+  }
+
+  const dim=new Date(curYear,curMonth,0).getDate();
+  const d=Math.min(Math.max(selectedOpsDay,1),dim);
+  selectedOpsDay=d;
+
+  const date=new Date(curYear,curMonth-1,d);
+  const dd=roster?.days[d];
+  const type=roster?(dd?.type||"unknown"):"unknown";
+  const dayName=DAYS_F[date.getDay()];
+
+  const dayNavHtml=`<button class="ops-day-picker-btn" onclick="openMiniCal()">
+    <div>
+      <div class="ops-day-picker-label">${DAYS_F[date.getDay()].charAt(0).toUpperCase()+DAYS_F[date.getDay()].slice(1)}, ${d} de ${MONTHS[curMonth-1]}</div>
+      <div class="ops-day-picker-sub">Toca para cambiar el día</div>
+    </div>
+    <span class="ops-day-picker-icon">📅</span>
+  </button>`;
+
+  if(!dd||type==="unknown"){
+    document.getElementById("opsContent").innerHTML=dayNavHtml+`<div class="ops-no-flights"><div style="font-size:32px;margin-bottom:10px">❓</div><div>Sin información para este día</div><div style="font-size:12px;margin-top:6px;color:#334155">Puede ser un día libre o un cambio pendiente de confirmar</div></div>`;
+    return;
+  }
+  if(type!=="flight"||!dd.flights?.length){
+    document.getElementById("opsContent").innerHTML=dayNavHtml+`<div class="ops-no-flights"><div style="font-size:32px;margin-bottom:10px">${TYPE_ICON[type]||"📋"}</div><div>${TYPE_LBL[type]}</div><div style="font-size:12px;margin-top:6px;color:#334155">La vista OPS es solo para días con vuelos</div></div>`;
+    return;
+  }
+
+  const opFlights=dd.flights.filter(f=>!f.dh);
+  if(!selectedOpsFlight||!opFlights.find(f=>f.num===selectedOpsFlight))selectedOpsFlight=opFlights[0]?.num;
+  const selF=opFlights.find(f=>f.num===selectedOpsFlight)||opFlights[0];
+
+  const selectorHtml=`<div class="section-lbl">Selecciona un vuelo</div>
+    <div class="flight-selector">${opFlights.map(f=>`
+      <div class="fp${f.num===selF?.num?" selected":""}" onclick="selectOpsFlight('${f.num}')">
+        <div class="fp-left"><span class="fp-num">${f.num}</span><div><div class="fp-route">${city(f.dep)} → ${city(f.arr)}</div><div class="fp-time">${f.depTime} → ${f.arrTime}</div></div></div>
+        <span class="fp-arr" style="${f.num===selF?.num?"color:#0ea5e9":""}">›</span>
+      </div>`).join("")}
+    </div>`;
+
+  const depIcao=ICAO[selF?.dep]||selF?.dep;
+  const arrIcao=ICAO[selF?.arr]||selF?.arr;
+
+  const acCard=`<div class="ops-card">
+    <div class="ops-card-title">🛫 Información operacional · ${selF?.num}</div>
+    <div class="ops-card-body">
+      <div class="ac-grid">
+        <div><div class="oi-label">Gate salida</div><div class="oi-value" id="opsGate">—</div><div class="oi-sub" id="opsGateSub">Cargando...</div></div>
+        <div><div class="oi-label">Avión asignado</div><div class="oi-value" id="opsAc">—</div><div class="oi-sub"><a id="opsFrLink" href="https://www.flightradar24.com/search?query=${selF?.num}" target="_blank" style="color:var(--sky);text-decoration:none;font-size:11px">Ver en FR24 →</a></div></div>
+      </div>
+      <div class="ac-status"><div class="ac-dot green"></div><div class="ac-text" id="opsAcStatus"><em style="color:#475569">Datos de gate y matrícula disponibles con API de FlightAware o AeroDataBox</em></div></div>
+      <div class="ops-map">
+        <div class="ops-map-loading" id="opsMapLoading">🗺️ Cargando mapa...</div>
+        <div id="opsMapDiv" style="width:100%;height:160px;"></div>
+        <a class="ops-fr-link" href="https://www.flightradar24.com/search?query=${selF?.num}" target="_blank">🛰️ FlightRadar24</a>
+      </div>
+    </div>
+  </div>`;
+
+  const metarSection=`
+    <div id="metarDep"><div class="metar-card"><div class="metar-hdr"><span class="metar-airport">🛫 Origen · ${depIcao} ${city(selF?.dep)}</span><span class="metar-time">Salida ${selF?.depTime}</span></div><div class="metar-body"><div class="metar-loading">⏳ Cargando meteorología...</div></div></div></div>
+    <div id="metarArr"><div class="metar-card"><div class="metar-hdr"><span class="metar-airport">🛬 Destino · ${arrIcao} ${city(selF?.arr)}</span><span class="metar-time">Llegada est. ${selF?.arrTime}</span></div><div class="metar-body"><div class="metar-loading">⏳ Cargando meteorología...</div></div></div></div>`;
+
+  document.getElementById("opsContent").innerHTML=dayNavHtml+selectorHtml+`<div class="ops-detail">${acCard}${metarSection}</div>`;
+
+  // Load map
+  setTimeout(async()=>{
+    const mapDiv=document.getElementById("opsMapDiv");
+    if(mapDiv&&selF){
+      const loading=document.getElementById("opsMapLoading");
+      if(loading)loading.style.display="none";
+      await showAircraftMap(selF.dep,selF.arr,"opsMapDiv");
+    }
+  },100);
+
+  // Load METAR/TAF
+  (async()=>{
+    const[mDep,tDep,mArr,tArr]=await Promise.all([fetchMetar(depIcao),fetchTaf(depIcao),fetchMetar(arrIcao),fetchTaf(arrIcao)]);
+    const depEl=document.getElementById("metarDep");
+    const arrEl=document.getElementById("metarArr");
+    if(depEl)depEl.innerHTML=renderMetarCard(mDep,tDep,`🛫 Origen · ${depIcao} ${city(selF?.dep)}`,`Salida ${selF?.depTime}`);
+    if(arrEl)arrEl.innerHTML=renderMetarCard(mArr,tArr,`🛬 Destino · ${arrIcao} ${city(selF?.arr)}`,`Llegada est. ${selF?.arrTime}`);
+  })();
+}
+
+function opsChangeDay(delta){
+  const dim=new Date(curYear,curMonth,0).getDate();
+  selectedOpsDay=Math.min(Math.max((selectedOpsDay||1)+delta,1),dim);
+  selectedOpsFlight=null;renderOps();
+}
+
+function openMiniCal(){
+  const roster=getRoster();
+  const dim=new Date(curYear,curMonth,0).getDate();
+  const fd=new Date(curYear,curMonth-1,1).getDay();
+  const off=fd===0?6:fd-1;
+  document.getElementById("miniCalTitle").textContent=MONTHS[curMonth-1]+" "+curYear;
+  let html="";
+  for(let i=0;i<off;i++)html+='<div class="mini-cal-day mc-empty"></div>';
+  for(let d=1;d<=dim;d++){
+    const dd=roster?.days[d];
+    const type=roster?(dd?.type||"unknown"):"unknown";
+    const isSelected=d===selectedOpsDay;
+    const hasFlight=type==="flight";
+    const on=hasON(dd);
+    html+=`<div class="mini-cal-day t-${type}${on?" overnight":""}${isSelected?" mc-selected":""}${!hasFlight?" mc-no-flight":""}" onclick="pickOpsDay(${d})">
+      <span class="mc-num">${d}</span>
+      <span class="mc-icon">${TYPE_ICON[type]||""}</span>
+    </div>`;
+  }
+  document.getElementById("miniCalGrid").innerHTML=html;
+  document.getElementById("miniCalOverlay").classList.add("open");
+}
+
+function closeMiniCal(e){document.getElementById("miniCalOverlay").classList.remove("open");}
+
+function pickOpsDay(d){
+  selectedOpsDay=d;selectedOpsFlight=null;
+  document.getElementById("miniCalOverlay").classList.remove("open");
+  renderOps();
+}
+
+function selectOpsFlight(num){selectedOpsFlight=num;renderOps();}
+
+// ── COUNTDOWN ──────────────────────────────────────────────
+function renderCountdown(){
+  const tk=today.getFullYear()+"-"+(today.getMonth()+1);
+  const ros=allMonths[tk];
+  const el=document.getElementById("countdown");
+  if(!ros){el.style.display="none";return;}
+  el.style.display="flex";
+  const d=today.getDate(),dim=new Date(today.getFullYear(),today.getMonth()+1,0).getDate();
+  const td=ros.days[d];
+  const isFree=!td||["free","free-req","arrival","unknown"].includes(td.type);
+  let nextAct=null,nextType=null;
+  for(let i=d+(isFree?0:1);i<=dim;i++){const dd=ros.days[i];if(dd&&!["free","free-req"].includes(dd.type)){nextAct=i;nextType=dd.type;break;}}
+  let freeSince=0;
+  for(let i=d;i>=1;i--){const dd=ros.days[i];if(!dd||["free","free-req","arrival","unknown"].includes(dd.type))freeSince++;else break;}
+  const icon=document.getElementById("cdIcon"),txt=document.getElementById("cdText");
+  if(isFree&&nextAct){
+    const diff=nextAct-d;icon.textContent="🏠";
+    if(diff===0)txt.innerHTML=`Hoy tiene <strong style="color:#fff">${TYPE_LBL[nextType]||"actividad"}</strong>`;
+    else if(diff===1)txt.innerHTML=`Alf lleva <strong style="color:#fff">${freeSince} día${freeSince>1?"s":""} en casa</strong>. Mañana tiene <strong style="color:#fff">${TYPE_LBL[nextType]||"actividad"}</strong>.`;
+    else txt.innerHTML=`Alf lleva <strong style="color:#fff">${freeSince} día${freeSince>1?"s":""} en casa</strong>. Próxima actividad en <strong style="color:#fff">${diff} días</strong> (${nextAct} ${MONTHS[curMonth-1].slice(0,3)}).`;
+  }else if(!nextAct){icon.textContent="😴";txt.innerHTML=`<strong style="color:#fff">Ya terminó de trabajar en ${MONTHS[curMonth-1]}.</strong> El resto del mes está libre.`;}
+  else{icon.textContent="✈️";txt.innerHTML=`Hoy trabaja Alf. Próxima actividad en <strong style="color:#fff">${nextAct-d} días</strong>.`;}
+}
+
+// ── WHERE IS ALF ───────────────────────────────────────────
+function whereIsAlf(){
+  const now=new Date();const d=now.getDate(),m=now.getMonth()+1,y=now.getFullYear();
+  const cur=now.getHours()*60+now.getMinutes();
+  const ros=allMonths[y+"-"+m];
+  const card=document.getElementById("statusCard");card.style.display="block";
+  document.getElementById("sLink").innerHTML="";document.getElementById("sLocalTime").innerHTML="";document.getElementById("sMapContainer").innerHTML="";destroyMap();
+  if(!ros){showStatus("rest","📅","Sin datos para hoy",`No hay rol cargado para ${MONTHS[m-1]} ${y}.`);return;}
+  const dd=ros.days[d];
+  if(!dd||dd.type==="unknown"){showStatus("rest","❓","Sin información para hoy","Este día no tiene datos en el rol. Puede haber un cambio pendiente de confirmar.");return;}
+  if(dd.type==="free"||dd.type==="free-req"){showStatus("ground","🏠","Alf está en casa","Hoy es día libre. Está en Santiago descansando con la familia. 🧡");return;}
+  if(dd.type==="arrival"){showStatus("ground","🛬","Llegó de madrugada",`El vuelo ${dd.fromFlight?.num} aterrizó a las ${dd.fromFlight?.arrTime}. Está en casa descansando. 😴`);return;}
+  if(dd.type==="layover"){const lt=getLocalTime(dd.city);showStatus("ground","🏨",`Pernocte en ${dd.cityName}`,"Está descansando en el hotel de LATAM. Regresa mañana.");if(lt)document.getElementById("sLocalTime").innerHTML=`<div class="status-local-time">🕐 En ${dd.cityName} son las ${lt} hora local</div>`;return;}
+  if(dd.type==="blank"){const[s,e]=[toMin(dd.hours?.[0]),toMin(dd.hours?.[1])];if(cur>=s&&cur<=e)showStatus("airport","📞","De blanco — disponible",`Puede ser llamado hasta las ${dd.hours?.[1]}. Si no hay llamado antes de las 21:00 del día anterior, queda libre.`);else showStatus("ground","🏠","En casa","El turno blanco de hoy ya terminó.");return;}
+  if(dd.type==="sim"){const[s,e]=[toMin(dd.hours?.[0]),toMin(dd.hours?.[1])];if(cur>=s&&cur<=e)showStatus("sim","🎮",`En el simulador (${dd.simType})`,dd.detail);else showStatus("ground","🏠","En casa",`Tiene simulador hoy (${dd.hours?.[0]}–${dd.hours?.[1]}) pero fuera de horario está en casa.`);return;}
+  if(dd.type==="airport"||dd.type==="emg"){const[s,e]=[toMin(dd.hours?.[0]),toMin(dd.hours?.[1])];if(cur>=s&&cur<=e)showStatus("airport","🏢",dd.type==="emg"?"En capacitación":"Turno en aeropuerto",dd.detail||`Horario: ${dd.hours?.[0]}–${dd.hours?.[1]}`);else showStatus("ground","🏠","En casa",`Actividad hoy (${dd.hours?.[0]}–${dd.hours?.[1]}) pero fuera de horario está en casa.`);return;}
+  if(dd.flights?.length){
+    for(const f of dd.flights){
+      if(f.dh)continue;const s=toMin(f.depTime),e=toMin(f.arrTime)+(f.nextDay?1440:0);
+      if(cur>=s-20&&cur<=e+30){
+        showStatus("flying","✈️","¡Alf está volando ahora!",`${f.num}: ${city(f.dep)} → ${city(f.arr)} · Sale ${f.depTime} · Llega ${f.arrTime}`);
+        const lt=getLocalTime(f.arr);if(lt)document.getElementById("sLocalTime").innerHTML=`<div class="status-local-time">🕐 En ${city(f.arr)} son las ${lt} hora local</div>`;
+        document.getElementById("sLink").innerHTML=`<a class="fr-link" href="https://www.flightradar24.com/search?query=${f.num}" target="_blank">🛰️ Ver en FlightRadar24</a>`;
+        showFlightMap(f,"sMapContainer");return;
+      }
+    }
+    const rep=dd.reportTime?toMin(dd.reportTime):null,fd2=toMin(dd.flights[0].depTime),la=toMin(dd.flights[dd.flights.length-1].arrTime);
+    if(rep&&cur>=rep&&cur<fd2)showStatus("airport","⏳","Presentándose en aeropuerto",`Llegó a las ${dd.reportTime}. Primer vuelo a las ${dd.flights[0].depTime}.`);
+    else if(cur>la+60)showStatus("ground","🏠","Terminó de volar",hasON(dd)?"Está en el hotel en destino. 🏨":"Ya está de vuelta en Santiago. 🏠");
+    else{const nxt=dd.flights.find(f=>toMin(f.depTime)>cur);showStatus("ground","🔄","Entre vuelos en tierra",nxt?`Próxima salida a las ${nxt.depTime} de ${city(nxt.dep)} a ${city(nxt.arr)}.`:"Descansando entre tramos.");}
+  }
+}
+
+function showStatus(type,emoji,title,detail){
+  const c=document.getElementById("statusCard");c.className="status-card s-"+type;c.style.display="block";
+  document.getElementById("sEmoji").textContent=emoji;document.getElementById("sTitle").textContent=title;document.getElementById("sDetail").innerHTML=detail;
+}
+
+// ── DAY PANEL ──────────────────────────────────────────────
+function showDay(d){
+  const roster=getRoster();const dd=roster?.days[d];
+  const date=new Date(curYear,curMonth-1,d);
+  document.getElementById("panelDate").textContent=DAYS_F[date.getDay()]+", "+d+" de "+MONTHS[curMonth-1]+" "+curYear;
+  let title="",body="";
+  const type=roster?(dd?.type||"unknown"):"unknown";
+  const msg=getDayMessage(dd);
+  const msgHtml=msg?`<div class="panel-msg">${msg}</div>`:"";
+
+  if(type==="unknown"){title="❓ Sin información";body=`<div class="info-box" style="border-left:3px solid #475569">Este día no aparece en el rol cargado. Puede ser un día libre o puede haber un cambio pendiente de confirmar. Consulta con Alf para verificar.</div>`;}
+  else if(!dd||type==="free"){title="😴 Día libre";body=`<div class="info-box">Alf está en casa en Santiago, descansando con la familia.</div>`;}
+  else if(type==="free-req"){title="🏖️ Libre requerido";body=`${msgHtml}<div class="info-box">Día libre obligatorio por regulación. La empresa protege estos días para garantizar el descanso mínimo de la tripulación.</div>`;}
+  else if(type==="arrival"){title="🛬 Llegada de madrugada";body=`${msgHtml}<div class="info-box">El vuelo <strong>${dd.fromFlight?.num}</strong> partió el día anterior y aterrizó en ${city(dd.fromFlight?.arr)} a las <strong>${dd.fromFlight?.arrTime}</strong>.<br><br>Alf llegó de madrugada. El resto del día lo pasa descansando.</div>`;}
+  else if(type==="layover"){const lt=getLocalTime(dd.city);title=`🏨 Pernocte en ${dd.cityName}`;body=`${msgHtml}${lt?`<div class="local-time-box">🕐 En ${dd.cityName} son las ${lt} hora local</div>`:""}<div class="info-box">Alf está descansando en el hotel de LATAM en <strong>${dd.cityName}</strong>. Llegó ayer y regresa mañana.</div>`;}
+  else if(type==="blank"){title="📞 De blanco";body=`${msgHtml}<div class="info-box">${dd.detail}<br><br><strong>Franja:</strong> ${dd.hours?.[0]} – ${dd.hours?.[1]}</div><div class="blank-note">💡 Si la aerolínea no avisa antes de las <strong>21:00 del día anterior</strong>, el blanco queda como día libre. La diferencia con un turno normal: en el blanco puede ser llamado en cualquier momento dentro de esa franja.</div>`;}
+  else if(type==="sim"){title=`🎮 Simulador ${dd.simType}`;body=`${msgHtml}<div class="info-box">${dd.detail}<br><br><strong>Horario:</strong> ${dd.hours?.[0]} – ${dd.hours?.[1]}<br><br>El simulador es una réplica exacta de la cabina. Alf practica procedimientos de emergencia sin pasajeros ni riesgo real.</div>`;}
+  else if(type==="airport"||type==="emg"){title=type==="emg"?"📋 Capacitación":"🏢 Turno aeropuerto";body=`${msgHtml}<div class="info-box">${dd.detail||""}<br><br><strong>Horario:</strong> ${dd.hours?.[0]} – ${dd.hours?.[1]}</div>`;}
+  else if(dd.flights?.length){
+    const op=dd.flights.filter(f=>!f.dh);
+    title=`✈️ ${op.length} vuelo${op.length!==1?"s":""} programado${op.length!==1?"s":""}`;
+    body+=msgHtml;
+    if(dd.reportTime&&op.length&&isEarlyFlight(op[0].depTime)){body+=`<div class="alarm-box">⏰ Despertador a las <strong>${fmtAlarm(op[0].depTime)}</strong> · Sale de casa ~<strong>${fmtHome(dd.reportTime)}</strong> · Se presenta a las <strong>${dd.reportTime}</strong></div>`;}
+    else if(dd.reportTime){body+=`<div class="report-box">⏰ Sale de casa a las ~<strong>${fmtHome(dd.reportTime)}</strong> · Se presenta en el aeropuerto a las <strong>${dd.reportTime}</strong></div>`;}
+    dd.flights.forEach(f=>{body+=`<div class="flight-card"><div class="fc-route"><div class="fc-cities"><span>${city(f.dep)}</span><span class="fc-arrow">→</span><span>${city(f.arr)}</span>${f.overnight?`<span class="badge badge-on">🌙 Pernocte</span>`:""}</div><div class="fc-times">🛫 ${f.depTime} · 🛬 ${f.arrTime}${f.nextDay?" (+1)":""} · ${AC_T[f.ac]||f.ac}</div>${f.dh?`<span class="badge badge-dh">Viaja como pasajero de posicionamiento</span>`:""}</div><div class="fc-num">${f.num}</div></div>`;});
+    if(hasON(dd)){const lf=op[op.length-1];body+=`<div class="info-box" style="border-left:3px solid var(--amber)">🌙 <strong>Pernocte en ${city(lf?.arr)}</strong> — duerme en hotel de LATAM y regresa al día siguiente.</div>`;}
+    // OPS shortcut
+    body+=`<div style="margin-top:10px"><button onclick="closePanel();selectedOpsDay=${d};selectedOpsFlight=null;setView('ops')" style="width:100%;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);color:#7dd3fc;border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">✈️ Ver info OPS de este día</button></div>`;
+  }
+
+  document.getElementById("panelTitle").textContent=title;
+  document.getElementById("panelBody").innerHTML=body;
+  document.getElementById("panel").classList.add("open");
+  document.getElementById("overlay").classList.add("open");
+}
+
+function closePanel(){document.getElementById("panel").classList.remove("open");document.getElementById("overlay").classList.remove("open");}
+
+// ── INIT ───────────────────────────────────────────────────
+loadData();
+renderAll();
+setView("cal");
+</script>
+</body>
+</html>
