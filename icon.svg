@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="24" fill="#061220"/>
+  <text x="60" y="52" text-anchor="middle" fill="#e0eaf6" font-size="28" font-family="monospace" font-weight="bold" letter-spacing="2">ALF</text>
+  <line x1="20" y1="63" x2="100" y2="63" stroke="#4a90d9" stroke-width="1.5" opacity="0.6"/>
+  <text x="60" y="84" text-anchor="middle" fill="#4a90d9" font-size="28" font-family="monospace" font-weight="bold" letter-spacing="2">ROL</text>
+</svg>
